@@ -380,11 +380,11 @@ static inline msg_t _i2c_txrx_timeout(I2CDriver *i2cp, i2caddr_t addr,
   i2cp->rxidx = 0;
 
   /* clear status flags */
-#if defined(KL26Z) /* extra flags on KL26Z */
+#if defined(I2Cx_FLT_STOPF) /* extra flags on KL26Z and KL27Z */
   i2cp->i2c->FLT |= I2Cx_FLT_STOPF;
 #endif
-#if defined(KL27Z) /* extra flags on KL27Z */
-  i2cp->i2c->FLT |= I2Cx_FLT_STOPF|I2Cx_FLT_STARTF;
+#if defined(I2Cx_FLT_STARTF) /* extra flags on KL27Z */
+  i2cp->i2c->FLT |= I2Cx_FLT_STARTF;
 #endif
   i2cp->i2c->S = I2Cx_S_IICIF|I2Cx_S_ARBL;
 
@@ -394,6 +394,10 @@ static inline msg_t _i2c_txrx_timeout(I2CDriver *i2cp, i2caddr_t addr,
     /* send repeated start */
     i2cp->i2c->C1 |= I2Cx_C1_RSTA | I2Cx_C1_TX;
   } else {
+    /* unlock during the wait, so that tasks with
+     * higher priority can get attention */
+    osalSysUnlock();
+
     /* wait until the bus is released */
     /* Calculating the time window for the timeout on the busy bus condition.*/
     start = osalOsGetSystemTimeX();
